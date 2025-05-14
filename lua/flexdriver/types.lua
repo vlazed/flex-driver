@@ -48,7 +48,7 @@
 ---@field addDriver DButton
 ---@field driverForm DForm
 ---@field updateInterval DNumSlider
----@field presets DPresetSaver
+---@field presets flexdriver_presetsaver
 
 ---Wrapper for `DTree_Node`
 ---@class TreePanel_Node: DTree_Node

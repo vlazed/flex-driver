@@ -65,8 +65,10 @@ function system.addDriver(entity, driverInfo)
 	if not flexable then
 		addFlexable(entIndex, driver.driver(driverInfo))
 		driverId = 1
+		print("New flexable. Driver at ", driverId)
 	else
 		driverId = flexable.drivers:insert(driver.driver(driverInfo))
+		print("Inserted driver at ", driverId)
 	end
 
 	return driverId
@@ -77,7 +79,7 @@ end
 function system.getDriver(entity, driverId)
 	local entIndex = entity:EntIndex()
 	local flexable = flexableInfo.flexables[entIndex]
-	return flexable and flexable.drivers[driverId]
+	return flexable and flexable.drivers:getDriver(driverId)
 end
 
 ---@param entity Entity
@@ -99,6 +101,7 @@ function system.removeDriver(entity, driverId)
 	local entIndex = entity:EntIndex()
 	local flexable = flexableInfo.flexables[entIndex]
 	if flexable then
+		print("Removing driver at ", driverId)
 		flexable.drivers:remove(driverId)
 	end
 
@@ -120,7 +123,7 @@ local function replicate(entIndex, boneDict, boneCount)
 	net.Start("flexdriver_replicate")
 	net.WriteUInt(entIndex, 14)
 	net.WriteUInt(boneCount, 8)
-	for index, boneInfo in ipairs_sparse(boneDict, "BoneDict" .. tostring(entIndex)) do
+	for index, boneInfo in pairs(boneDict) do
 		net.WriteUInt(index, 8)
 		net.WriteVector(boneInfo.pos)
 		net.WriteAngle(boneInfo.ang)
@@ -143,7 +146,7 @@ do
 		shouldCheckReplication = tobool(newValue) or shouldCheckReplication
 	end)
 	local updateIntervalConVar = GetConVar("flexdriver_updateinterval")
-	local updateInterval = updateInterval and updateInterval:GetFloat()
+	local updateInterval = updateIntervalConVar and updateIntervalConVar:GetFloat()
 	cvars.AddChangeCallback("flexdriver_updateinterval", function(_, _, newValue)
 		updateInterval = tonumber(newValue) or updateInterval
 	end)
@@ -178,10 +181,8 @@ do
 				continue
 			end
 
-			PrintTable(flexable or {})
 			if not shouldCheckReplication or (shouldCheckReplication and checkReplication(flexable.entity)) then
 				local boneDict, boneCount = flexable.drivers:evaluate()
-				PrintTable(boneDict or {})
 				replicate(entIndex, boneDict, boneCount)
 			end
 		end

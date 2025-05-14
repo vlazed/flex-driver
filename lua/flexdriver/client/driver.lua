@@ -20,7 +20,6 @@ end
 ---@param other BoneInfo|Vector|Angle
 ---@return BoneInfo
 function BoneInfo:__add(other)
-	print(self, other)
 	if isvector(other) then
 		return boneInfo(self.pos + other, self.ang)
 	elseif isangle(other) then
@@ -106,8 +105,6 @@ function Driver:setParserType(parser, entity)
 	then
 		result = entity["Get" .. self.typeId](entity)
 	end
-
-	print(result)
 
 	parser:addVariable("x", result)
 end

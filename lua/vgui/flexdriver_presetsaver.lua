@@ -3,7 +3,7 @@ local helpers = include("bonewind/shared/helpers.lua")
 
 ---Saves bone presets for a specific model and tries to load them if they are suspected to match the model's skeleton
 ---@source https://github.com/Winded/RagdollMover/blob/2c9c5a9417effc618e4530ce98f9b69f3ad817fe/lua/weapons/gmod_tool/stools/ragmover_ikchains.lua#L402
----@class DPresetSaver: DPanel
+---@class flexdriver_presetsaver: DPanel
 local PANEL = {}
 
 function PANEL:Init()
@@ -30,7 +30,7 @@ function PANEL:SetData(newData)
 end
 
 function PANEL:OnSavePreset()
-	return {}
+	return ""
 end
 
 function PANEL:OnSaveSuccess() end
@@ -49,13 +49,12 @@ function PANEL:SavePreset()
 		self:OnSaveFailure("No entity selected")
 		return
 	end
-	local data = self:OnSavePreset()
-	if not next(data) then
+	local json = self:OnSavePreset()
+	if #json == 0 then
 		self:OnSaveFailure("Empty data")
 		return
 	end
 
-	local json = util.TableToJSON(data, true)
 	if not file.Exists(self.directory, "DATA") then
 		file.CreateDir(self.directory)
 	end
@@ -78,11 +77,11 @@ function PANEL:SavePreset()
 	end
 
 	-- TODO: Use result from file.Write operation to inform user
-	file.Write(self.directory .. "/" .. name .. ".txt", json)
-	-- if not success then
-	-- 	self:OnSaveFailure("message")
-	-- 	return
-	-- end
+	local success = file.Write(self.directory .. "/" .. name .. ".txt", json)
+	if not success then
+		self:OnSaveFailure("An error occurred while saving")
+		return
+	end
 	self:AddChoice(name)
 
 	self:RefreshDirectory()
@@ -142,4 +141,4 @@ function PANEL:RefreshDirectory()
 	end
 end
 
-vgui.Register("DPresetSaver", PANEL, "DPanel")
+vgui.Register("flexdriver_presetsaver", PANEL, "DPanel")

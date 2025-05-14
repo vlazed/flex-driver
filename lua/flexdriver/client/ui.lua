@@ -235,7 +235,7 @@ function ui.ConstructPanel(cPanel, panelProps, panelState)
 
 	local driverForm = makeCategory(cPanel, "Drivers", "DForm")
 
-	local presets = vgui.Create("DPresetSaver", cPanel)
+	local presets = vgui.Create("flexdriver_presetsaver", cPanel)
 	presets:SetEntity(flexable)
 	presets:SetDirectory(BONE_PRESETS_DIR)
 	presets:RefreshDirectory()
@@ -304,7 +304,9 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 		for i = 2 + startingPosition, #items do
 			local driverPanel = items[i]
 			if driverPanel.driverId then
+				local oldDriverId = driverPanel.driverId
 				driverPanel.driverId = driverPanel.driverId - 1
+				print(Format("Change %d to %d", oldDriverId, driverPanel.driverId))
 			end
 		end
 	end
@@ -323,7 +325,9 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 			local _, operation = self.operation:GetSelected()
 			local _, axisType = self.axis:GetSelected()
 			local _, type = self.type:GetSelected()
+			print("Attempting to retrieve driver at", self.driverId)
 			if FlexDriver.System.getDriver(flexable, self.driverId) then
+				print("Setting driver to ", self.driverId)
 				FlexDriver.System.setDriver(flexable, self.driverId, {
 					expression = self.expression:GetText(),
 					operation = operation,
@@ -333,6 +337,7 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 					typeId = self.typeId:GetText(),
 				})
 			else
+				print("Adding driver")
 				self.driverId = FlexDriver.System.addDriver(flexable, {
 					expression = self.expression:GetText(),
 					operation = operation,
@@ -341,6 +346,7 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 					type = type,
 					typeId = self.typeId:GetText(),
 				})
+				print("Got driver id", self.driverId)
 			end
 			self:SetAutocomplete(flexable)
 			self.bone.data = bone
@@ -435,14 +441,22 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 	end
 
 	function presets:OnSavePreset()
-		local data = {}
+		local flexableInfo = FlexDriver.System.getEntity(flexable:EntIndex())
+		local data = flexableInfo.drivers:serialize()
 
 		return data
 	end
 
-	---@param preset any
+	---@param preset DriverInfo[]
 	function presets:OnLoadPreset(preset)
-		notification.AddLegacy("Drivers loaded", NOTIFY_GENERIC, 5)
+		if istable(preset) then
+			for _, driverInfo in ipairs(preset) do
+				---@cast driverInfo DriverInfo
+				FlexDriver.System.addDriver(flexable, driverInfo)
+			end
+			refreshDrivers(flexable)
+			notification.AddLegacy("Drivers loaded", NOTIFY_GENERIC, 5)
+		end
 	end
 
 	---@param node BoneTreeNode
