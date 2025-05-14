@@ -222,4 +222,5 @@ end
 return {
 	array = driverArray,
 	driver = driver,
+	boneInfo = boneInfo,
 }

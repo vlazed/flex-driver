@@ -210,6 +210,9 @@ end
 ---@type DFrame?
 local boneTreeModal
 
+---@type DriverInfo
+local clipboard
+
 ---@param cPanel DForm|ControlPanel
 ---@param panelProps PanelProps
 ---@param panelState PanelState
@@ -255,6 +258,7 @@ function ui.ConstructPanel(cPanel, panelProps, panelState)
 	boneTreeModal = vgui.Create("DFrame")
 	boneTreeModal:SetTitle("#tool.flexdriver.bonetree")
 	boneTreeModal:SizeTo(cPanel:GetWide(), cPanel:GetTall(), 0)
+	boneTreeModal:ShowCloseButton(false)
 
 	-- Shows up in a modal frame
 	local boneTree = vgui.Create("DTreeScroller", boneTreeModal)
@@ -311,8 +315,22 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 		end
 	end
 
+	local hookDriver
+
+	local function addDriverFromInfo(driverInfo)
+		local panel = vgui.Create("flexdriver_driver", driverForm)
+		driverForm:AddItem(panel)
+		hookDriver(panel)
+		local bone = driverInfo.bone
+
+		panel:SetDriver(driverInfo)
+		panel.bone:SetText(flexable:GetBoneName(bone) or "#tool.flexdriver.drivers.bone")
+		panel.bone.data = bone
+		panel.driverId = FlexDriver.System.addDriver(flexable, driverInfo)
+	end
+
 	---@param driverPanel flexdriver_driver
-	local function hookDriver(driverPanel)
+	function hookDriver(driverPanel)
 		function driverPanel:SetBoneRequest()
 			if boneTreeModal then
 				boneTreeModal:SetVisible(true)
@@ -320,32 +338,30 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 			panelState.selectedDriver = self
 		end
 
-		function driverPanel:SetBoneResponse()
-			local bone = panelState.selectedBone
-			local _, operation = self.operation:GetSelected()
-			local _, axisType = self.axis:GetSelected()
-			local _, type = self.type:GetSelected()
+		function driverPanel:OnRightClick()
+			local menu = DermaMenu()
+			menu:AddOption("Copy", function()
+				clipboard = self:GetDriverInfo()
+			end)
+			if clipboard then
+				menu:AddOption("Paste", function()
+					driverPanel:SetDriver(clipboard)
+				end)
+			end
+			menu:AddOption("Duplicate", function()
+				addDriverFromInfo(self:GetDriverInfo(self.bone.data))
+			end)
+			menu:Open()
+		end
+
+		function driverPanel:SetBoneResponse(bone)
 			print("Attempting to retrieve driver at", self.driverId)
 			if FlexDriver.System.getDriver(flexable, self.driverId) then
 				print("Setting driver to ", self.driverId)
-				FlexDriver.System.setDriver(flexable, self.driverId, {
-					expression = self.expression:GetText(),
-					operation = operation,
-					bone = bone,
-					axisType = axisType,
-					type = type,
-					typeId = self.typeId:GetText(),
-				})
+				FlexDriver.System.setDriver(flexable, self.driverId, self:GetDriverInfo(bone))
 			else
 				print("Adding driver")
-				self.driverId = FlexDriver.System.addDriver(flexable, {
-					expression = self.expression:GetText(),
-					operation = operation,
-					bone = bone,
-					axisType = axisType,
-					type = type,
-					typeId = self.typeId:GetText(),
-				})
+				self.driverId = FlexDriver.System.addDriver(flexable, self:GetDriverInfo(bone))
 				print("Got driver id", self.driverId)
 			end
 			self:SetAutocomplete(flexable)
@@ -354,20 +370,8 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 		end
 
 		function driverPanel:OnDriverChange()
-			local bone = panelState.selectedBone
-			local _, operation = self.operation:GetSelected()
-			local _, axisType = self.axis:GetSelected()
-			local _, type = self.type:GetSelected()
-			FlexDriver.System.setDriver(flexable, self.driverId, {
-				expression = self.expression:GetText(),
-				operation = operation,
-				bone = bone,
-				axisType = axisType,
-				type = type,
-				typeId = self.typeId:GetText(),
-			})
+			FlexDriver.System.setDriver(flexable, self.driverId, self:GetDriverInfo())
 			self:SetAutocomplete(flexable)
-			self.bone.data = bone
 		end
 
 		function driverPanel:OnDelete()
@@ -382,7 +386,7 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 		---@diagnostic disable-next-line: undefined-field
 		local items = driverForm.Items
 		for i = 3, #items do
-			local panel = driverForm[i]
+			local panel = items[i]
 			if IsValid(panel) then
 				panel:Remove()
 			end
@@ -393,17 +397,11 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 
 		local flexableInfo = FlexDriver.System.getEntity(entity:EntIndex())
 		if flexableInfo then
-			for _, driver in ipairs(flexableInfo.drivers.drivers) do
+			for driverId, driver in ipairs(flexableInfo.drivers.drivers) do
 				local panel = vgui.Create("flexdriver_driver", driverForm)
-				panel:SetDriver({
-					expression = driver.expression,
-					operation = driver.operation,
-					bone = driver.bone,
-					axisType = driver.axisType,
-					type = driver.type,
-					typeId = driver.typeId,
-				})
+				panel:SetDriver(driver)
 				panel.bone:SetText(flexable:GetBoneName(driver.bone) or "#tool.flexdriver.drivers.bone")
+				panel.driverId = driverId
 
 				driverForm:AddItem(panel)
 				hookDriver(panel)
@@ -450,11 +448,11 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 	---@param preset DriverInfo[]
 	function presets:OnLoadPreset(preset)
 		if istable(preset) then
-			for _, driverInfo in ipairs(preset) do
-				---@cast driverInfo DriverInfo
-				FlexDriver.System.addDriver(flexable, driverInfo)
-			end
+			FlexDriver.System.clearDrivers(flexable)
 			refreshDrivers(flexable)
+			for _, driverInfo in ipairs(preset) do
+				addDriverFromInfo(driverInfo)
+			end
 			notification.AddLegacy("Drivers loaded", NOTIFY_GENERIC, 5)
 		end
 	end
@@ -462,15 +460,14 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 	---@param node BoneTreeNode
 	function boneTree:OnNodeSelected(node)
 		setBone:SetEnabled(true)
-		panelState.selectedBone = node.bone
 	end
 
 	function setBone:DoClick()
 		if boneTreeModal then
 			boneTreeModal:SetVisible(false)
 		end
-		if panelState.selectedDriver then
-			panelState.selectedDriver:SetBoneResponse()
+		if panelState.selectedDriver and panelState.selectedBone then
+			panelState.selectedDriver:SetBoneResponse(panelState.selectedBone)
 		end
 		self:SetEnabled(false)
 	end

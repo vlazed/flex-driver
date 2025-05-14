@@ -24,6 +24,12 @@ local operationIds = {
 }
 
 function PANEL:Init()
+	self.clickArea = vgui.Create("DLabel", self)
+	self.clickArea:SetMouseInputEnabled(true)
+	function self.clickArea.DoRightClick()
+		self:OnRightClick()
+	end
+
 	self.deleteButton = vgui.Create("DImageButton", self)
 	self.deleteButton:SetImage("icon16/delete.png")
 	function self.deleteButton.DoClick()
@@ -35,6 +41,7 @@ function PANEL:Init()
 	function self.bone.DoClick()
 		self:SetBoneRequest()
 	end
+	self.bone.data = -1
 
 	self.expression = vgui.Create("DTextEntry", self)
 	self.expression:SetUpdateOnType(false)
@@ -93,7 +100,27 @@ function PANEL:Init()
 	self:SetTall(48)
 end
 
----@param driverInfo DriverInfo
+function PANEL:OnRightClick()
+	print("Right clicked")
+end
+
+---@param bone integer?
+---@return table
+function PANEL:GetDriverInfo(bone)
+	local _, operation = self.operation:GetSelected()
+	local _, axisType = self.axis:GetSelected()
+	local _, type = self.type:GetSelected()
+	return {
+		expression = self.expression:GetText(),
+		operation = operation,
+		bone = bone or self.bone.data,
+		axisType = axisType,
+		type = type,
+		typeId = self.typeId:GetText(),
+	}
+end
+
+---@param driverInfo DriverInfo | Driver
 function PANEL:SetDriver(driverInfo)
 	self.axis:ChooseOptionID(axisIds[driverInfo.axisType] or 1)
 	self.operation:ChooseOptionID(operationIds[driverInfo.type] or 1)
@@ -111,7 +138,8 @@ function PANEL:OnDriverChange() end
 
 function PANEL:SetBoneRequest() end
 
-function PANEL:SetBoneResponse() end
+---@param bone integer
+function PANEL:SetBoneResponse(bone) end
 
 ---@param entity Entity
 function PANEL:SetAutocomplete(entity)
@@ -140,6 +168,8 @@ end
 
 function PANEL:PerformLayout(w, h)
 	local columns = self.columns
+
+	self.clickArea:SetSize(w, h)
 
 	self.deleteButton:SetSize(16, 16)
 	self.deleteButton:SetPos(w - self.deleteButton:GetWide(), 0)

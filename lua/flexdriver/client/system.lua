@@ -24,6 +24,7 @@ local function constructFlexable(entity, d)
 	return {
 		entity = entity,
 		drivers = driver.array({ d }, entity),
+		resetters = {},
 	}
 end
 
@@ -42,6 +43,7 @@ local function addFlexable(entIndex, driver)
 	return flexable
 end
 
+---Set driver parameters with `driverInfo` for the specified `driverId` of an `entity`
 ---@param entity Entity
 ---@param driverId integer
 ---@param driverInfo DriverInfo
@@ -51,11 +53,13 @@ function system.setDriver(entity, driverId, driverInfo)
 	if flexable then
 		local d = flexable.drivers:getDriver(driverId)
 		if d then
+			flexable.resetters[d.bone] = driver.boneInfo()
 			d:setInfo(driverInfo)
 		end
 	end
 end
 
+---Add a driver to an entity. If an entity doesn't have any drivers, add the entity to the system
 ---@param entity Entity
 ---@param driverInfo DriverInfo
 function system.addDriver(entity, driverInfo)
@@ -74,6 +78,7 @@ function system.addDriver(entity, driverInfo)
 	return driverId
 end
 
+---Get a driver if it exists
 ---@param entity Entity
 ---@return Driver?
 function system.getDriver(entity, driverId)
@@ -82,6 +87,7 @@ function system.getDriver(entity, driverId)
 	return flexable and flexable.drivers:getDriver(driverId)
 end
 
+---Switch the order of `driverId` to the `newDriverId`
 ---@param entity Entity
 ---@return boolean
 function system.switchDriver(entity, driverId, newDriverId)
@@ -95,6 +101,7 @@ function system.switchDriver(entity, driverId, newDriverId)
 	return false
 end
 
+---Remove a driver from a specified `driverId` for an `entity`. If there are no more drivers, remove the `entity` from the system
 ---@param entity Entity
 ---@param driverId integer
 function system.removeDriver(entity, driverId)
@@ -102,11 +109,29 @@ function system.removeDriver(entity, driverId)
 	local flexable = flexableInfo.flexables[entIndex]
 	if flexable then
 		print("Removing driver at ", driverId)
+		local d = flexable.drivers:getDriver(driverId)
+		if d then
+			flexable.resetters[d.bone] = driver.boneInfo()
+		end
 		flexable.drivers:remove(driverId)
 	end
 
 	if #flexable.drivers == 0 then
 		removeFlexable(entIndex)
+	end
+end
+
+---Remove drivers from entity, but don't remove the entity from the system
+---Mostly used for switching presets
+---@param entity Entity
+function system.clearDrivers(entity)
+	local entIndex = entity:EntIndex()
+	local flexable = flexableInfo.flexables[entIndex]
+	if flexable then
+		for _, d in ipairs(flexable.drivers.drivers) do
+			flexable.resetters[d.bone] = driver.boneInfo()
+		end
+		flexable.drivers.drivers = {}
 	end
 end
 
@@ -184,6 +209,9 @@ do
 			if not shouldCheckReplication or (shouldCheckReplication and checkReplication(flexable.entity)) then
 				local boneDict, boneCount = flexable.drivers:evaluate()
 				replicate(entIndex, boneDict, boneCount)
+
+				replicate(entIndex, flexable.resetters, table.Count(flexable.resetters))
+				flexable.resetters = {}
 			end
 		end
 		flexableInfo.previousCount = flexableInfo.count

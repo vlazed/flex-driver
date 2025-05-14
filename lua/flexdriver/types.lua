@@ -10,6 +10,7 @@
 ---@class ClientFlexable
 ---@field entity Entity
 ---@field drivers DriverArray
+---@field resetters BoneInfo[]
 
 ---@class ServerFlexable
 ---@field entity Entity
