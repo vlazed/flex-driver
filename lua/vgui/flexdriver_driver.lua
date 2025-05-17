@@ -21,6 +21,7 @@ local typeIds = {
 local operationIds = {
 	["ADD"] = 1,
 	["REPLACE"] = 2,
+	["MULTIPLY"] = 3,
 }
 
 function PANEL:Init()
@@ -77,6 +78,7 @@ function PANEL:Init()
 	self.operation = vgui.Create("DComboBox", self)
 	self.operation:AddChoice("Add", "ADD", true)
 	self.operation:AddChoice("Replace", "REPLACE")
+	self.operation:AddChoice("Multiply", "MULTIPLY")
 	function self.operation.OnSelect()
 		self:OnDriverChange()
 	end

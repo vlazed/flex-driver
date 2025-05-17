@@ -59,7 +59,7 @@ local axisIndexer = {
 
 ---@class Driver
 ---@field expression string A mathematical expression which, when parsed, will set a value for the `bone`'s `axis` for its `axisType`
----@field operation 'ADD'|'REPLACE' How the expression is applied, relative to other drivers on the same bone axis and axis type. 'ADD' sums the results of other drivers, while 'REPLACE' has precedence over other drivers,
+---@field operation 'ADD'|'REPLACE'|'MULTIPLY' How the expression is applied, relative to other drivers on the same bone axis and axis type. 'ADD' sums the results of the previous drivers, 'MULTIPLY' multiples the results of the previous drivers, while 'REPLACE' has precedence over the previous drivers
 ---@field bone integer Bone index
 ---@field axisType 'POS_X'|'POS_Y'|'POS_Z'|'PITCH'|'YAW'|'ROLL'|'SCALE_X'|'SCALE_Y'|'SCALE_Z'
 ---@field type string An entity property (networked property, flex)
@@ -204,6 +204,8 @@ function DriverArray:evaluate()
 			result[d.bone] = result[d.bone] + d:evaluate(parser)
 		elseif d.operation == "REPLACE" then
 			result[d.bone] = d:evaluate(parser)
+		elseif d.operation == "MULTIPLY" then
+			result[d.bone] = result[d.bone] * d:evaluate(parser)
 		end
 	end
 
