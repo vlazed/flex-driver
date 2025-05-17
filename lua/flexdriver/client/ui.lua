@@ -160,13 +160,16 @@ local function populateBoneTree(node, entity)
 		local boneType = getBoneType(entity, b)
 
 		local parent = entity:GetBoneParent(b)
+		local boneName = entity:GetBoneName(b)
 		if parent > -1 and parentSet[parent] then
-			parentSet[b] = addBoneNode(parentSet[parent], entity:GetBoneName(b), boneType)
+			parentSet[b] = addBoneNode(parentSet[parent], boneName, boneType)
 			parentSet[b].bone = b
+			parentSet[b].boneName = boneName
 			table.insert(nodeArray, parentSet[b])
 		else
-			parentSet[b] = addBoneNode(node, entity:GetBoneName(b), boneType)
+			parentSet[b] = addBoneNode(node, boneName, boneType)
 			parentSet[b].bone = b
+			parentSet[b].boneName = boneName
 			table.insert(nodeArray, parentSet[b])
 		end
 	end
@@ -202,6 +205,7 @@ local function refreshBoneTree(boneTree, flexable)
 	boneTree:Clear()
 
 	local nodeArray = populateBoneTree(boneTree, flexable)
+	boneTree.bones = nodeArray
 	local depth = getBoneTreeDepth(nodeArray)
 	local width = depth * 17
 	boneTree:UpdateWidth(width + 64 + 32 + 128)
@@ -257,8 +261,9 @@ function ui.ConstructPanel(cPanel, panelProps, panelState)
 	end
 	boneTreeModal = vgui.Create("DFrame")
 	boneTreeModal:SetTitle("#tool.flexdriver.bonetree")
-	boneTreeModal:SizeTo(cPanel:GetWide(), cPanel:GetTall(), 0)
+	boneTreeModal:SizeTo(cPanel:GetWide(), 0, 0)
 	boneTreeModal:ShowCloseButton(false)
+	boneTreeModal.targetHeight = cPanel:GetTall() / 2
 
 	-- Shows up in a modal frame
 	local boneTree = vgui.Create("DTreeScroller", boneTreeModal)
@@ -268,7 +273,7 @@ function ui.ConstructPanel(cPanel, panelProps, panelState)
 	local setBone = vgui.Create("DButton", boneTreeModal)
 	setBone:Dock(BOTTOM)
 	setBone:SetEnabled(false)
-	setBone:SetText("#tool.flexdriver.bonetree.setbone")
+	setBone:SetText("#tool.flexdriver.bonetree.set")
 
 	boneTreeModal:SetVisible(false)
 
@@ -326,7 +331,7 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 		local bone = driverInfo.bone
 
 		panel:SetDriver(driverInfo)
-		panel.bone:SetText(flexable:GetBoneName(bone) or "#tool.flexdriver.drivers.bone")
+		panel.bone:SetText(boneTree.bones[bone + 1].boneName or "#tool.flexdriver.drivers.bone")
 		panel.bone.data = bone
 		panel.driverId = FlexDriver.System.addDriver(flexable, driverInfo)
 	end
@@ -350,7 +355,7 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 			for driverId, driver in ipairs(flexableInfo.drivers.drivers) do
 				local panel = vgui.Create("flexdriver_driver", driverForm)
 				panel:SetDriver(driver)
-				panel.bone:SetText(flexable:GetBoneName(driver.bone) or "#tool.flexdriver.drivers.bone")
+				panel.bone:SetText(boneTree.bones[driver.bone + 1].boneName or "#tool.flexdriver.drivers.bone")
 				panel.driverId = driverId
 
 				driverForm:AddItem(panel)
@@ -364,6 +369,11 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 		function driverPanel:SetBoneRequest()
 			if boneTreeModal then
 				boneTreeModal:SetVisible(true)
+				boneTreeModal:MakePopup()
+				boneTreeModal:SizeTo(-1, boneTreeModal.targetHeight, 0.5, 0, -0.5)
+				local x, y = input.GetCursorPos()
+				boneTreeModal:SetPos(x, y)
+				boneTreeModal:MoveTo(x, y - boneTreeModal.targetHeight, 0.5, 0, -0.5)
 			end
 			panelState.selectedDriver = self
 		end
@@ -396,7 +406,7 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 			end
 			self:SetAutocomplete(flexable)
 			self.bone.data = bone
-			self.bone:SetText(flexable:GetBoneName(bone) or "#tool.flexdriver.drivers.bone")
+			self.bone:SetText(boneTree.bones[bone + 1].boneName or "#tool.flexdriver.drivers.bone")
 		end
 
 		function driverPanel:OnDriverChange()
@@ -477,11 +487,13 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 	---@param node BoneTreeNode
 	function boneTree:OnNodeSelected(node)
 		setBone:SetEnabled(true)
+		panelState.selectedBone = node.bone
 	end
 
 	function setBone:DoClick()
 		if boneTreeModal then
 			boneTreeModal:SetVisible(false)
+			boneTreeModal:SetTall(0)
 		end
 		if panelState.selectedDriver and panelState.selectedBone then
 			panelState.selectedDriver:SetBoneResponse(panelState.selectedBone)

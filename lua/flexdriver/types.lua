@@ -44,7 +44,7 @@
 
 ---@class PanelChildren
 ---@field treePanel DTreeScroller
----@field boneTree DTreeScroller
+---@field boneTree BoneTree
 ---@field setBone DButton
 ---@field addDriver DButton
 ---@field driverForm DForm
@@ -62,6 +62,9 @@
 ---@field ancestor TreePanel_Node
 ---@field GetSelectedItem fun(self: TreePanel): TreePanel_Node
 
+---@class BoneTree: DTreeScroller
+---@field bones BoneTreeNode[]
+
 ---Main structure representing an entity's model tree
 ---@class EntityTree
 ---@field parent integer?
@@ -71,6 +74,7 @@
 ---@class BoneTreeNode: DTree_Node
 ---@field GetChildNodes fun(self: BoneTreeNode): BoneTreeNode[]
 ---@field bone Bone
+---@field boneName string
 
 ---@class Parser
 ---@field solve fun(self: Parser, expression: string): result: number
