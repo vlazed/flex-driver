@@ -303,10 +303,12 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 
 	---@param startingPosition integer driverId >= 1
 	local function resetIds(startingPosition)
+		---@type Panel[]
 		---@diagnostic disable-next-line: undefined-field
 		local items = driverForm.Items
 		for i = 2 + startingPosition, #items do
-			local driverPanel = items[i]
+			local driverPanelContent = items[i]
+			local driverPanel = driverPanelContent:GetChildren()[1]
 			if driverPanel.driverId then
 				local oldDriverId = driverPanel.driverId
 				driverPanel.driverId = driverPanel.driverId - 1
