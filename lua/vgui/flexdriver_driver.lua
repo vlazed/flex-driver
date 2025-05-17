@@ -83,7 +83,7 @@ function PANEL:Init()
 
 	self.upButton = vgui.Create("DImageButton", self)
 	function self.upButton.DoClick()
-		self:OnOrderChange(1)
+		self:OnOrderChange(-1)
 	end
 
 	self.upButton:SetImage("icon16/bullet_arrow_up.png")
@@ -91,7 +91,7 @@ function PANEL:Init()
 	self.downButton = vgui.Create("DImageButton", self)
 	self.downButton:SetImage("icon16/bullet_arrow_down.png")
 	function self.downButton.DoClick()
-		self:OnOrderChange(-1)
+		self:OnOrderChange(1)
 	end
 
 	self.columns = 3.75

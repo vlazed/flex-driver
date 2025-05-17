@@ -331,6 +331,34 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 		panel.driverId = FlexDriver.System.addDriver(flexable, driverInfo)
 	end
 
+	---@param entity Entity
+	local function refreshDrivers(entity)
+		---@diagnostic disable-next-line: undefined-field
+		local items = driverForm.Items
+		for i = 3, #items do
+			local panel = items[i]
+			if IsValid(panel) then
+				panel:Remove()
+			end
+		end
+		for i = #items, 3, -1 do
+			items[i] = nil
+		end
+
+		local flexableInfo = FlexDriver.System.getEntity(entity:EntIndex())
+		if flexableInfo then
+			for driverId, driver in ipairs(flexableInfo.drivers.drivers) do
+				local panel = vgui.Create("flexdriver_driver", driverForm)
+				panel:SetDriver(driver)
+				panel.bone:SetText(flexable:GetBoneName(driver.bone) or "#tool.flexdriver.drivers.bone")
+				panel.driverId = driverId
+
+				driverForm:AddItem(panel)
+				hookDriver(panel)
+			end
+		end
+	end
+
 	---@param driverPanel flexdriver_driver
 	function hookDriver(driverPanel)
 		function driverPanel:SetBoneRequest()
@@ -381,33 +409,20 @@ function ui.HookPanel(panelChildren, panelProps, panelState)
 			resetIds(self.driverId + 1)
 			self:Remove()
 		end
-	end
 
-	---@param entity Entity
-	local function refreshDrivers(entity)
-		---@diagnostic disable-next-line: undefined-field
-		local items = driverForm.Items
-		for i = 3, #items do
-			local panel = items[i]
-			if IsValid(panel) then
-				panel:Remove()
+		function driverPanel:OnOrderChange(direction)
+			local flexableInfo = FlexDriver.System.getEntity(flexable:EntIndex())
+			local count = flexableInfo and #flexableInfo.drivers.drivers or 0
+			local oldDriverId = self.driverId
+			if count == 0 then
+				return
 			end
-		end
-		for i = #items, 3, -1 do
-			items[i] = nil
-		end
-
-		local flexableInfo = FlexDriver.System.getEntity(entity:EntIndex())
-		if flexableInfo then
-			for driverId, driver in ipairs(flexableInfo.drivers.drivers) do
-				local panel = vgui.Create("flexdriver_driver", driverForm)
-				panel:SetDriver(driver)
-				panel.bone:SetText(flexable:GetBoneName(driver.bone) or "#tool.flexdriver.drivers.bone")
-				panel.driverId = driverId
-
-				driverForm:AddItem(panel)
-				hookDriver(panel)
+			if oldDriverId + direction > count or oldDriverId + direction < 1 then
+				return
 			end
+
+			FlexDriver.System.switchDriver(flexable, oldDriverId, oldDriverId + direction)
+			refreshDrivers(flexable)
 		end
 	end
 
