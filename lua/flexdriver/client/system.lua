@@ -116,7 +116,7 @@ function system.removeDriver(entity, driverId)
 		flexable.drivers:remove(driverId)
 	end
 
-	if #flexable.drivers == 0 then
+	if #flexable.drivers.drivers == 0 then
 		removeFlexable(entIndex)
 	end
 end

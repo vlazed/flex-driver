@@ -96,7 +96,7 @@ function Driver:setParserType(parser, entity)
 	if self.type == "FLEX" then
 		local flexId = entity:GetFlexIDByName(self.typeId)
 		if flexId then
-			result = entity:GetFlexWeight(flexId)
+			result = entity:GetFlexScale() * entity:GetFlexWeight(flexId)
 		end
 	elseif
 		self.type == "PROP"
@@ -164,7 +164,7 @@ function DriverArray:remove(i)
 	table.remove(self.drivers, i)
 end
 
-function DriverArray.__len(self)
+function DriverArray:__len()
 	return #self.drivers
 end
 
