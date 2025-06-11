@@ -1,5 +1,5 @@
----@module "bonewind.shared.helpers"
-local helpers = include("bonewind/shared/helpers.lua")
+---@module "flexdriver.shared.helpers"
+local helpers = include("flexdriver/shared/helpers.lua")
 
 ---Saves bone presets for a specific model and tries to load them if they are suspected to match the model's skeleton
 ---@source https://github.com/Winded/RagdollMover/blob/2c9c5a9417effc618e4530ce98f9b69f3ad817fe/lua/weapons/gmod_tool/stools/ragmover_ikchains.lua#L402
